@@ -1,0 +1,35 @@
+# Compilados C
+*.o
+*.a
+*.out
+*.exe
+
+# Ejecutables generados
+c/dot/dot
+c/dot/dot_lu
+c/mv/mv
+c/mv/mv_lu
+c/mm/mm
+c/mm/mm_opt
+cblas/ddot/ddot
+cblas/dgemv/dgemv
+cblas/dgemm/dgemm
+
+# Temporales de pruebas
+data.dat
+data_*.dat
+
+# LaTeX auxiliares
+*.aux
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# Temporales
+*~
+core
+.DS_Store
+Thumbs.db

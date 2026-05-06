@@ -1,0 +1,377 @@
+\documentclass[12pt,letterpaper]{article}
+
+% =========================
+% PAQUETES
+% =========================
+\usepackage[spanish,es-tabla]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{geometry}
+\usepackage{setspace}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{caption}
+
+% =========================
+% CONFIGURACIÓN
+% =========================
+\geometry{
+    left=2.5cm,
+    right=2.5cm,
+    top=2.5cm,
+    bottom=2.5cm
+}
+
+\onehalfspacing
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    urlcolor=blue,
+    citecolor=black
+}
+
+\lstset{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    numbers=left,
+    numberstyle=\tiny,
+    keywordstyle=\color{blue},
+    commentstyle=\color{gray},
+    stringstyle=\color{red},
+    tabsize=4,
+    showstringspaces=false
+}
+
+% =========================
+% DATOS DEL INFORME
+% =========================
+\title{
+    \textbf{Práctica 1: Optimización de Código}\\
+    \large Asignatura Tópicos A
+}
+
+\author{
+    Nombre: Luis Antonio Muñoz Vásquez\\
+    Universidad de Magallanes
+}
+
+\date{Mayo de 2026}
+
+\begin{document}
+
+% =========================
+% PORTADA
+% =========================
+\maketitle
+\thispagestyle{empty}
+
+\vspace{1cm}
+
+\begin{center}
+    \textbf{Facultad de Ingeniería}\\
+    Departamento de Ingeniería en Computación
+\end{center}
+
+\vfill
+
+\begin{center}
+    Punta Arenas, Chile
+\end{center}
+
+\newpage
+
+% =========================
+% ÍNDICE
+% =========================
+\tableofcontents
+\newpage
+
+% =========================
+% 1. INTRODUCCIÓN
+% =========================
+\section{Introducción}
+
+La presente práctica tiene como finalidad estudiar y comparar el rendimiento de distintas implementaciones de operaciones de álgebra lineal, considerando el uso de Octave, lenguaje C y funciones de la biblioteca CBLAS.
+
+Las operaciones analizadas corresponden al producto punto, la multiplicación matriz-vector y la multiplicación matriz-matriz. Estas operaciones permiten observar diferencias importantes entre código interpretado, código compilado, código optimizado y rutinas especializadas de álgebra lineal.
+
+Según el enunciado de la práctica, se debe comparar el tiempo de ejecución entre operadores de Octave y funciones CBLAS. Además, se deben implementar las operaciones en lenguaje C, aplicar optimización de código y comparar sus resultados con CBLAS. En total, se solicita generar seis gráficos asociados a los tiempos de ejecución de los algoritmos implementados.
+
+% =========================
+% 2. OBJETIVOS
+% =========================
+\section{Objetivos}
+
+\subsection{Objetivo general}
+
+Comparar el rendimiento de distintas implementaciones de operaciones de álgebra lineal, considerando Octave, C manual, C optimizado y CBLAS.
+
+\subsection{Objetivos específicos}
+
+\begin{itemize}
+    \item Implementar y medir el tiempo de ejecución del producto punto, multiplicación matriz-vector y multiplicación matriz-matriz.
+    \item Comparar los operadores de Octave con las funciones CBLAS correspondientes.
+    \item Implementar versiones manuales en C para cada operación.
+    \item Aplicar técnicas de optimización de código y evaluar su impacto en los tiempos de ejecución.
+    \item Analizar los resultados obtenidos en función de la complejidad algorítmica de cada operación.
+\end{itemize}
+
+% =========================
+% 3. MARCO TEÓRICO
+% =========================
+\section{Marco teórico}
+
+\subsection{Complejidad algorítmica}
+
+La complejidad algorítmica permite estimar el crecimiento del costo computacional de un algoritmo en función del tamaño del problema. Para esta práctica se consideran tres operaciones principales.
+
+El producto punto entre dos vectores de tamaño $n$ requiere recorrer ambos vectores una vez, por lo que su complejidad es:
+
+\begin{equation}
+    O(n)
+\end{equation}
+
+La multiplicación matriz-vector, considerando una matriz de tamaño $n \times n$ y un vector de tamaño $n$, requiere dos ciclos anidados, por lo que su complejidad es:
+
+\begin{equation}
+    O(n^2)
+\end{equation}
+
+La multiplicación matriz-matriz, considerando dos matrices cuadradas de tamaño $n \times n$, requiere tres ciclos anidados, por lo que su complejidad es:
+
+\begin{equation}
+    O(n^3)
+\end{equation}
+
+\subsection{Octave}
+
+GNU Octave permite realizar operaciones de álgebra lineal mediante operadores nativos, tales como el producto punto, la multiplicación matriz-vector y la multiplicación matriz-matriz. Estos operadores suelen estar implementados mediante rutinas optimizadas y compiladas, por lo que presentan mejores tiempos que una función interpretada escrita directamente en Octave.
+
+\subsection{CBLAS}
+
+CBLAS corresponde a una interfaz en lenguaje C para utilizar rutinas BLAS. En esta práctica se utilizaron las funciones:
+
+\begin{itemize}
+    \item \texttt{cblas\_ddot}: producto punto.
+    \item \texttt{cblas\_dgemv}: multiplicación matriz-vector.
+    \item \texttt{cblas\_dgemm}: multiplicación matriz-matriz.
+\end{itemize}
+
+\subsection{Optimización de código}
+
+En esta práctica se aplicaron técnicas de optimización sobre las implementaciones en C. Para el producto punto y la multiplicación matriz-vector se utilizó loop unrolling. Para la multiplicación matriz-matriz se modificó el orden de los ciclos con el objetivo de mejorar la localidad de memoria.
+
+% =========================
+% 4. METODOLOGÍA
+% =========================
+\section{Metodología}
+
+Las pruebas fueron realizadas en WSL utilizando Octave, GCC, CBLAS y Gnuplot. Para cada tamaño del problema se ejecutó cada algoritmo siete veces y se calculó el tiempo promedio.
+
+Las mediciones se realizaron utilizando:
+
+\begin{itemize}
+    \item \texttt{tic} y \texttt{toc} en Octave.
+    \item \texttt{gettimeofday} en lenguaje C.
+    \item Scripts Bash para automatizar las pruebas.
+    \item Gnuplot para generar las gráficas.
+\end{itemize}
+
+Los tamaños de prueba fueron seleccionados de manera que los tiempos de ejecución fueran representativos, procurando alcanzar tiempos mayores a $0.01$ segundos, tal como solicita el enunciado de la práctica.
+
+% =========================
+% 5. IMPLEMENTACIONES
+% =========================
+\section{Implementaciones}
+
+\subsection{Producto punto}
+
+El producto punto se implementó de tres formas principales:
+
+\begin{itemize}
+    \item Operador nativo de Octave.
+    \item Implementación manual en C.
+    \item Implementación optimizada en C mediante loop unrolling.
+    \item Función \texttt{cblas\_ddot}.
+\end{itemize}
+
+La implementación manual en C utiliza un ciclo simple que acumula el producto de los elementos correspondientes de ambos vectores.
+
+\subsection{Multiplicación matriz-vector}
+
+La multiplicación matriz-vector se implementó de forma manual mediante dos ciclos anidados. Posteriormente, se generó una versión optimizada que utiliza un acumulador local y loop unrolling en el ciclo interno.
+
+\subsection{Multiplicación matriz-matriz}
+
+La multiplicación matriz-matriz se implementó inicialmente mediante tres ciclos anidados en el orden clásico $i$, $j$, $k$. Luego, se implementó una versión optimizada cambiando el orden de los ciclos a $i$, $k$, $j$, con el objetivo de mejorar el acceso a memoria en arreglos almacenados en orden row-major.
+
+% =========================
+% 6. RESULTADOS
+% =========================
+\section{Resultados}
+
+\subsection{Comparación Octave}
+
+\subsubsection{Producto punto en Octave}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{img/octave_dot.png}
+    \caption{Comparación del producto punto en Octave.}
+    \label{fig:octave_dot}
+\end{figure}
+
+\subsubsection{Multiplicación matriz-vector en Octave}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{img/octave_mv.png}
+    \caption{Comparación de multiplicación matriz-vector en Octave.}
+    \label{fig:octave_mv}
+\end{figure}
+
+\subsubsection{Multiplicación matriz-matriz en Octave}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{img/octave_mm.png}
+    \caption{Comparación de multiplicación matriz-matriz en Octave.}
+    \label{fig:octave_mm}
+\end{figure}
+
+\subsection{Comparación CBLAS}
+
+\subsubsection{Producto punto con CBLAS}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{img/cblas_ddot.png}
+    \caption{Tiempo de ejecución de \texttt{cblas\_ddot}.}
+    \label{fig:cblas_ddot}
+\end{figure}
+
+\subsubsection{Multiplicación matriz-vector con CBLAS}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{img/cblas_dgemv.png}
+    \caption{Tiempo de ejecución de \texttt{cblas\_dgemv}.}
+    \label{fig:cblas_dgemv}
+\end{figure}
+
+\subsubsection{Multiplicación matriz-matriz con CBLAS}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{img/cblas_dgemm.png}
+    \caption{Tiempo de ejecución de \texttt{cblas\_dgemm}.}
+    \label{fig:cblas_dgemm}
+\end{figure}
+
+\subsection{Comparación C manual, C optimizado y CBLAS}
+
+\subsubsection{Producto punto}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{img/c_dot_compare.png}
+    \caption{Comparación entre producto punto manual, optimizado y CBLAS.}
+    \label{fig:c_dot_compare}
+\end{figure}
+
+\subsubsection{Multiplicación matriz-vector}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{img/c_mv_compare.png}
+    \caption{Comparación entre matriz-vector manual, optimizado y CBLAS.}
+    \label{fig:c_mv_compare}
+\end{figure}
+
+\subsubsection{Multiplicación matriz-matriz}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{img/c_mm_compare.png}
+    \caption{Comparación entre matriz-matriz manual, optimizada y CBLAS.}
+    \label{fig:c_mm_compare}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{img/c_mm_compare_log.png}
+    \caption{Comparación matriz-matriz en escala logarítmica.}
+    \label{fig:c_mm_compare_log}
+\end{figure}
+
+% =========================
+% 7. ANÁLISIS
+% =========================
+\section{Análisis de resultados}
+
+\subsection{Producto punto}
+
+En el producto punto se observa un comportamiento aproximadamente lineal, coherente con su complejidad $O(n)$. La versión optimizada mediante loop unrolling logra reducir el tiempo de ejecución respecto a la versión manual. Sin embargo, la función \texttt{cblas\_ddot} presenta mejores resultados para tamaños grandes, debido a que corresponde a una rutina especializada y optimizada.
+
+\subsection{Multiplicación matriz-vector}
+
+En la multiplicación matriz-vector se observa un crecimiento más pronunciado que en el producto punto, lo cual es coherente con su complejidad $O(n^2)$. La versión optimizada logra mejorar el rendimiento en varios tamaños, aunque se observaron algunas mediciones irregulares en tamaños intermedios. Estas variaciones pueden asociarse a ruido del sistema, carga de CPU o efectos de memoria.
+
+\subsection{Multiplicación matriz-matriz}
+
+La multiplicación matriz-matriz presenta la diferencia más significativa entre las implementaciones. La versión manual muestra tiempos muy altos, especialmente en tamaños grandes. La versión optimizada reduce considerablemente el tiempo de ejecución al mejorar la localidad de memoria. Aun así, \texttt{cblas\_dgemm} presenta el mejor rendimiento, evidenciando la ventaja de utilizar bibliotecas especializadas.
+
+% =========================
+% 8. CONCLUSIONES
+% =========================
+\section{Conclusiones}
+
+A partir de los resultados obtenidos, se concluye que la complejidad algorítmica tiene una influencia directa en el tiempo de ejecución de los algoritmos. El producto punto mostró un crecimiento lineal, la multiplicación matriz-vector un crecimiento cuadrático y la multiplicación matriz-matriz un crecimiento cúbico.
+
+Las implementaciones en C presentaron tiempos considerablemente menores que las funciones interpretadas en Octave. Además, las optimizaciones aplicadas permitieron mejorar el rendimiento de las versiones manuales, especialmente en la multiplicación matriz-matriz.
+
+CBLAS obtuvo los mejores resultados generales, principalmente en tamaños grandes. Esto demuestra la importancia de utilizar bibliotecas optimizadas para operaciones de álgebra lineal cuando se trabaja con grandes volúmenes de datos o cálculos intensivos.
+
+Finalmente, la práctica permitió comprobar experimentalmente la relación entre complejidad algorítmica, optimización de código, acceso a memoria y rendimiento computacional.
+
+% =========================
+% 9. ANEXOS
+% =========================
+\section{Anexos}
+
+\subsection{Archivos generados}
+
+Durante el desarrollo de la práctica se generaron archivos de código en Octave, C, scripts Bash, archivos de datos y gráficas.
+
+\subsection{Estructura de carpetas utilizada}
+
+\begin{lstlisting}[language=bash]
+practica1/
+├── octave/
+├── cblas/
+│   ├── array/
+│   ├── ddot/
+│   ├── dgemv/
+│   └── dgemm/
+├── c/
+│   ├── dot/
+│   ├── mv/
+│   └── mm/
+├── resultados/
+│   ├── datos/
+│   └── graficos/
+└── informe_latex/
+\end{lstlisting}
+
+\end{document}

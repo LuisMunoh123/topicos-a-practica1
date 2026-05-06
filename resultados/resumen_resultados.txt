@@ -1,0 +1,34 @@
+RESUMEN DE RESULTADOS - PRACTICA 1 TOPICOS A
+
+1. Producto punto en C
+Archivo: c_dot_compare.dat
+Columnas:
+n | dot manual | dot_lu optimizado | cblas_ddot
+
+2. Matriz-vector en C
+Archivo: c_mv_compare.dat
+Columnas:
+n | mv manual | mv_lu optimizado | cblas_dgemv
+
+3. Matriz-matriz en C
+Archivo: c_mm_compare.dat
+Columnas:
+n | mm manual | mm_opt optimizado | cblas_dgemm
+
+4. Octave
+Archivos:
+octave_dot.dat
+octave_mv.dat
+octave_mm.dat
+
+Cada archivo contiene:
+n | función implementada en Octave | operador nativo de Octave
+
+5. CBLAS
+Archivos:
+cblas_ddot.dat
+cblas_dgemv.dat
+cblas_dgemm.dat
+
+Cada archivo contiene:
+n | tiempo promedio CBLAS

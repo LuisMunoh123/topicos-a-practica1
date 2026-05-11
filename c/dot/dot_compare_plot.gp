@@ -1,9 +1,10 @@
 set terminal pngcairo size 1200,700
 set output "dot_compare.png"
-set title "Producto punto en C: dot vs dot_lu vs cblas_ddot"
+set title "Algorithms for dot product"
 set xlabel "size (n)"
 set ylabel "time (seconds)"
 set grid
-plot "dot_compare.dat" using 1:2 with lines title "dot", \
-     "dot_compare.dat" using 1:3 with lines title "dot_lu", \
-     "dot_compare.dat" using 1:4 with lines title "cblas_ddot"
+set key top left
+plot "dot_compare.dat" using 1:2 with linespoints lw 2 pt 7 ps 1.0 lc rgb "#0072BD" title "C", \
+     "dot_compare.dat" using 1:3 with linespoints lw 2 pt 5 ps 1.0 lc rgb "#D95319" title "loop unrolling C", \
+     "dot_compare.dat" using 1:4 with linespoints lw 2 pt 9 ps 1.0 lc rgb "#77AC30" title "Cblas"

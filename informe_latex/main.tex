@@ -230,7 +230,7 @@ En Octave se utilizaron las funciones \texttt{tic} y \texttt{toc}. En C se utili
 
 \subsection{Tamaños utilizados}
 
-Los tamaños de entrada fueron seleccionados de forma progresiva, usando potencias de dos. Se buscó alcanzar tiempos mayores a $0.01$ segundos, ya que tiempos demasiado pequeños pueden producir mediciones poco confiables.
+Los tamaños de entrada fueron seleccionados de forma progresiva, usando potencias de dos. Los tamaños de entrada fueron seleccionados experimentalmente hasta encontrar rangos en los cuales tanto Octave como CBLAS entregaran tiempos de ejecución medibles y mayores a 0,01 segundos. Este criterio se utilizó para evitar mediciones poco representativas asociadas a tiempos demasiado pequeños.
 
 % =========================
 % IMPLEMENTACIONES
@@ -271,7 +271,9 @@ for(i = 0; i < limit; i += 5)
 
 \subsection{Multiplicación matriz-vector}
 
-La implementación manual de matriz-vector utiliza dos ciclos anidados:
+La implementación optimizada de la multiplicación matriz-vector se presentó considerando el efecto del orden de almacenamiento en memoria. En lenguaje C los arreglos bidimensionales se almacenan en \textit{row major order}, por lo que el recorrido por filas favorece la localidad espacial y reduce accesos ineficientes a memoria.
+
+La \textbf{versión C row major} (manual) utiliza dos ciclos anidados recorriendo por filas:
 
 \begin{lstlisting}[language=C]
 for(i = 0; i < m; i++)
@@ -284,9 +286,11 @@ for(i = 0; i < m; i++)
 }
 \end{lstlisting}
 
-La versión optimizada utiliza un acumulador local y loop unrolling en el ciclo interno, disminuyendo accesos innecesarios a memoria.
+La \textbf{versión C column major} (optimizada) reordena los accesos para comparar el efecto de la localidad de datos al recorrer la matriz en distinto orden, haciendo evidente que el rendimiento se ve afectado por el patrón de acceso a memoria.
 
 \subsection{Multiplicación matriz-matriz}
+
+En la multiplicación matriz-matriz se evaluó una \textbf{versión C clásica} y una \textbf{versión C optimizada} mediante cambio de orden de ciclos. Esta reorganización permite recorrer elementos contiguos en memoria, mejorando la localidad de datos y el rendimiento general de la implementación en C.
 
 La implementación manual se realizó mediante tres ciclos anidados en el orden clásico:
 
@@ -325,69 +329,77 @@ for(i = 0; i < m; i++)
 \end{lstlisting}
 
 % =========================
+% COMPLEJIDAD DESDE EL CÓDIGO
+% =========================
+\subsection{Relación entre implementación y complejidad algorítmica}
+
+En esta sección se identifica, directamente en el código C, el origen de la complejidad de cada operación.
+
+\subsubsection{Producto punto — $O(n)$}
+
+La complejidad $O(n)$ se observa en la presencia de un único ciclo que recorre los $n$ elementos de los vectores:
+
+\begin{lstlisting}[language=C]
+for(i = 0; i < n; i++)
+    c += x[i] * y[i];
+\end{lstlisting}
+
+\subsubsection{Multiplicación matriz-vector — $O(n^2)$}
+
+La complejidad $O(n^2)$ se aprecia en dos ciclos anidados: uno para las filas de la matriz y otro para las columnas:
+
+\begin{lstlisting}[language=C]
+for(i = 0; i < m; i++)
+    for(j = 0; j < n; j++)
+        y[i] += A[i * n + j] * x[j];
+\end{lstlisting}
+
+\subsubsection{Multiplicación matriz-matriz — $O(n^3)$}
+
+La complejidad $O(n^3)$ se identifica en tres ciclos anidados, correspondientes al cálculo de cada elemento de la matriz resultante:
+
+\begin{lstlisting}[language=C]
+for(i = 0; i < m; i++)
+    for(j = 0; j < n; j++)
+        for(p = 0; p < k; p++)
+            C[i*n+j] += A[i*k+p] * B[p*n+j];
+\end{lstlisting}
+
+% =========================
 % RESULTADOS
 % =========================
 \section{Resultados}
 
-\subsection{Resultados en Octave}
+\subsection{Comparación Octave vs CBLAS}
 
-\subsubsection{Producto punto en Octave}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.9\textwidth]{octave_dot.png}
-    \caption{Comparación del producto punto implementado en Octave y operador nativo.}
-    \label{fig:octave_dot}
-\end{figure}
-
-\subsubsection{Multiplicación matriz-vector en Octave}
+\subsubsection{Producto punto}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.9\textwidth]{octave_mv.png}
-    \caption{Comparación de multiplicación matriz-vector implementada en Octave y operador nativo.}
-    \label{fig:octave_mv}
+    \includegraphics[width=0.9\textwidth]{octave_vs_cblas_dot.png}
+    \caption{Comparación del operador nativo de Octave y \texttt{cblas\_ddot} para el producto punto.}
+    \label{fig:octave_vs_cblas_dot}
 \end{figure}
 
-\subsubsection{Multiplicación matriz-matriz en Octave}
+\subsubsection{Multiplicación matriz-vector}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.9\textwidth]{octave_mm.png}
-    \caption{Comparación de multiplicación matriz-matriz implementada en Octave y operador nativo.}
-    \label{fig:octave_mm}
+    \includegraphics[width=0.9\textwidth]{octave_vs_cblas_mv.png}
+    \caption{Comparación del operador nativo de Octave y \texttt{cblas\_dgemv} para la multiplicación matriz-vector.}
+    \label{fig:octave_vs_cblas_mv}
 \end{figure}
 
-\subsection{Resultados con CBLAS}
-
-\subsubsection{Producto punto con \texttt{cblas\_ddot}}
+\subsubsection{Multiplicación matriz-matriz}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.9\textwidth]{cblas_ddot.png}
-    \caption{Tiempo de ejecución de \texttt{cblas\_ddot}.}
-    \label{fig:cblas_ddot}
+    \includegraphics[width=0.9\textwidth]{octave_vs_cblas_mm.png}
+    \caption{Comparación del operador nativo de Octave y \texttt{cblas\_dgemm} para la multiplicación matriz-matriz.}
+    \label{fig:octave_vs_cblas_mm}
 \end{figure}
 
-\subsubsection{Multiplicación matriz-vector con \texttt{cblas\_dgemv}}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.9\textwidth]{cblas_dgemv.png}
-    \caption{Tiempo de ejecución de \texttt{cblas\_dgemv}.}
-    \label{fig:cblas_dgemv}
-\end{figure}
-
-\subsubsection{Multiplicación matriz-matriz con \texttt{cblas\_dgemm}}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.9\textwidth]{cblas_dgemm.png}
-    \caption{Tiempo de ejecución de \texttt{cblas\_dgemm}.}
-    \label{fig:cblas_dgemm}
-\end{figure}
-
-\subsection{Comparación C manual, C optimizado y CBLAS}
+\subsection{Comparación C manual / C optimizado / CBLAS}
 
 \subsubsection{Producto punto}
 
@@ -396,7 +408,7 @@ for(i = 0; i < m; i++)
 \caption{Tiempos de ejecución para producto punto.}
 \begin{tabular}{rrrr}
 \toprule
-$n$ & C manual & C optimizado & CBLAS \\
+$n$ & C clásico & C loop unrolling & CBLAS \\
 \midrule
 2097152 & 0.00197586 & 0.00169957 & 0.00213343 \\
 4194304 & 0.00422486 & 0.00346971 & 0.00475314 \\
@@ -411,7 +423,7 @@ $n$ & C manual & C optimizado & CBLAS \\
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.9\textwidth]{c_dot_compare.png}
-    \caption{Comparación entre producto punto manual, optimizado y CBLAS.}
+    \caption{Comparación entre producto punto: C clásico, C loop unrolling y CBLAS.}
     \label{fig:c_dot_compare}
 \end{figure}
 
@@ -422,7 +434,7 @@ $n$ & C manual & C optimizado & CBLAS \\
 \caption{Tiempos de ejecución para multiplicación matriz-vector.}
 \begin{tabular}{rrrr}
 \toprule
-$n$ & C manual & C optimizado & CBLAS \\
+$n$ & C row major & C column major & CBLAS \\
 \midrule
 1024 & 0.00102200 & 0.00067200 & 0.00296014 \\
 2048 & 0.00354857 & 0.00262414 & 0.00209571 \\
@@ -437,7 +449,7 @@ $n$ & C manual & C optimizado & CBLAS \\
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.9\textwidth]{c_mv_compare.png}
-    \caption{Comparación entre multiplicación matriz-vector manual, optimizada y CBLAS.}
+    \caption{Comparación entre multiplicación matriz-vector: C row major, C column major y CBLAS.}
     \label{fig:c_mv_compare}
 \end{figure}
 
@@ -448,6 +460,7 @@ $n$ & C manual & C optimizado & CBLAS \\
 \caption{Tiempos de ejecución para multiplicación matriz-matriz.}
 \begin{tabular}{rrrr}
 \toprule
+$n$ & C row major & C column major & CBLAS \\
 $n$ & C manual & C optimizado & CBLAS \\
 \midrule
 128 & 0.00263500 & 0.000505571 & 0.00109614 \\
@@ -463,7 +476,7 @@ $n$ & C manual & C optimizado & CBLAS \\
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.9\textwidth]{c_mm_compare.png}
-    \caption{Comparación entre multiplicación matriz-matriz manual, optimizada y CBLAS.}
+    \caption{Comparación entre multiplicación matriz-matriz: C row major, C column major y CBLAS.}
     \label{fig:c_mm_compare}
 \end{figure}
 
@@ -479,27 +492,23 @@ $n$ & C manual & C optimizado & CBLAS \\
 % =========================
 \section{Análisis de resultados}
 
+Los resultados muestran que las rutinas especializadas de CBLAS presentan, en general, menores tiempos de ejecución que las implementaciones manuales. Esto se explica por el uso de bibliotecas compiladas y optimizadas para operaciones de álgebra lineal. En el caso de las implementaciones en C, las mejoras obtenidas mediante loop unrolling y reorganización de ciclos evidencian que la optimización de código y la localidad de memoria influyen directamente en el rendimiento.
+
 \subsection{Análisis del producto punto}
 
-El producto punto presentó un crecimiento aproximadamente lineal, coherente con su complejidad $O(n)$. En las implementaciones en C se observó que la versión optimizada mediante loop unrolling redujo el tiempo de ejecución en todos los tamaños evaluados.
-
-Para tamaños pequeños, la función \texttt{cblas\_ddot} no siempre fue más rápida que las versiones manuales. Sin embargo, a medida que aumentó el tamaño del problema, CBLAS presentó mejores resultados. Esto se debe a que las rutinas BLAS están diseñadas para aprovechar mejor las características de la arquitectura y reducir costos de ejecución en problemas de mayor escala.
+El producto punto presentó un crecimiento aproximadamente lineal, coherente con su complejidad $O(n)$. El operador nativo de Octave resultó más rápido que la función manual escrita en Octave, ya que el operador interno está implementado en código compilado. En las implementaciones en C, la versión optimizada mediante loop unrolling redujo el tiempo de ejecución al disminuir la sobrecarga de control del ciclo. A medida que el tamaño del problema aumentó, CBLAS presentó los mejores resultados, confirmando el efecto de su alto nivel de optimización.
 
 \subsection{Análisis de la multiplicación matriz-vector}
 
-La multiplicación matriz-vector presentó un crecimiento superior al producto punto, lo que es coherente con su complejidad $O(n^2)$. La versión optimizada en C logró mejorar el rendimiento respecto a la versión manual en varios tamaños.
+La multiplicación matriz-vector presentó un crecimiento superior al producto punto, coherente con su complejidad $O(n^2)$. En esta operación, el orden de almacenamiento en memoria tiene un impacto directo: la versión C row major, al recorrer los datos de forma contigua en memoria, favorece la localidad espacial y reduce accesos ineficientes a caché. La versión CBLAS fue la más eficiente, especialmente en tamaños grandes.
 
-Sin embargo, se observó una medición irregular en el tamaño $n = 16384$, donde la versión optimizada presentó un tiempo mayor al esperado. Esta irregularidad puede estar asociada a ruido del sistema, carga del procesador, administración de memoria o efectos de caché. Por esta razón, dicho punto debe ser interpretado como una medición atípica y no como una tendencia general del algoritmo.
-
-En tamaños grandes, CBLAS presentó un rendimiento superior, confirmando la ventaja de utilizar rutinas especializadas para operaciones de álgebra lineal.
+Se observó una medición irregular en $n = 16384$, donde la versión optimizada presentó un tiempo mayor al esperado. Esta irregularidad puede estar asociada a ruido del sistema, carga del procesador o efectos de caché y debe interpretarse como una medición atípica.
 
 \subsection{Análisis de la multiplicación matriz-matriz}
 
-La multiplicación matriz-matriz fue la operación con mayor diferencia entre las implementaciones. La versión manual presentó tiempos muy elevados, especialmente para tamaños grandes. Esto se explica por su complejidad $O(n^3)$ y por el acceso menos eficiente a memoria.
+La multiplicación matriz-matriz fue la operación con mayor diferencia entre las implementaciones, resultado esperado dada su complejidad $O(n^3)$. La versión C clásica presentó tiempos muy elevados especialmente para tamaños grandes, por el acceso menos eficiente a memoria. La versión C optimizada mediante cambio de orden de ciclos reorganizó los accesos para recorrer elementos contiguos en memoria, mejorando la localidad de datos: para $n = 4096$, la versión manual tardó 4219.46\,s mientras que la optimizada tardó 22.46\,s.
 
-La versión optimizada mediante cambio del orden de ciclos redujo considerablemente los tiempos de ejecución. En particular, para $n = 4096$, la versión manual tardó 4219.46 segundos, mientras que la versión optimizada tardó 22.4642 segundos. Esto demuestra el impacto de la localidad de memoria sobre el rendimiento.
-
-A pesar de la mejora obtenida, \texttt{cblas\_dgemm} fue ampliamente superior, alcanzando 0.38605 segundos para el mismo tamaño. Este resultado evidencia el alto nivel de optimización de BLAS para operaciones matriciales.
+En comparación, \texttt{cblas\_dgemm} alcanzó 0.386\,s para el mismo tamaño, evidenciando el alto nivel de optimización de BLAS para operaciones matriciales. En cuanto a la comparación Octave operador vs CBLAS, CBLAS superó al operador nativo en los tamaños donde ambas mediciones resultaron representativas.
 
 % =========================
 % DISCUSIÓN
@@ -508,26 +517,24 @@ A pesar de la mejora obtenida, \texttt{cblas\_dgemm} fue ampliamente superior, a
 
 Los resultados obtenidos permiten observar que la elección de la implementación influye directamente en el rendimiento. Aunque todos los algoritmos resuelven matemáticamente el mismo problema, sus tiempos de ejecución pueden variar de forma considerable.
 
-En Octave, los operadores nativos fueron mucho más eficientes que las funciones implementadas manualmente con ciclos. Esto se debe a que las funciones escritas directamente en Octave son interpretadas, mientras que los operadores nativos suelen apoyarse en rutinas compiladas.
+En Octave, los operadores nativos fueron mucho más eficientes que las funciones implementadas manualmente con ciclos, debido a que las funciones escritas directamente en Octave son interpretadas, mientras que los operadores nativos se apoyan en rutinas compiladas. Sin embargo, CBLAS superó al operador nativo en las operaciones de mayor escala, lo que confirma la ventaja de las bibliotecas especializadas.
 
-En C, las optimizaciones aplicadas permitieron mejorar el rendimiento de las versiones manuales. El loop unrolling fue útil en el producto punto y en la multiplicación matriz-vector. Sin embargo, la mejora más significativa ocurrió en la multiplicación matriz-matriz, donde el cambio en el orden de los ciclos permitió mejorar la localidad de memoria.
+En C, las optimizaciones aplicadas permitieron mejorar el rendimiento respecto de las versiones manuales. El loop unrolling redujo la sobrecarga de control en el producto punto. El cambio de orden de ciclos en la multiplicación matriz-matriz y el uso del recorrido row major en la multiplicación matriz-vector tuvieron un impacto significativo al mejorar la localidad de memoria.
 
-Finalmente, las funciones CBLAS demostraron el mejor rendimiento general. Esto se debe a que BLAS está diseñado específicamente para operaciones de álgebra lineal y aprovecha optimizaciones internas que son difíciles de igualar con implementaciones manuales simples.
+Finalmente, las funciones CBLAS demostraron el mejor rendimiento general, ya que BLAS está diseñado específicamente para operaciones de álgebra lineal y aprovecha optimizaciones internas que son difíciles de igualar con implementaciones manuales.
 
 % =========================
 % CONCLUSIONES
 % =========================
 \section{Conclusiones}
 
-A partir del desarrollo de la práctica, se concluye que la complejidad algorítmica tiene un impacto directo en el tiempo de ejecución. El producto punto presentó un crecimiento lineal, la multiplicación matriz-vector un crecimiento cuadrático y la multiplicación matriz-matriz un crecimiento cúbico.
+Se concluye que la complejidad algorítmica determina el crecimiento general del tiempo de ejecución, pero no explica por sí sola las diferencias de rendimiento entre implementaciones. El producto punto presentó un crecimiento lineal, la multiplicación matriz-vector cuadrático y la multiplicación matriz-matriz cúbico.
 
-Las implementaciones en C fueron considerablemente más rápidas que las funciones interpretadas en Octave. Además, las optimizaciones aplicadas permitieron reducir los tiempos de ejecución, especialmente en la multiplicación matriz-matriz.
+Las rutinas CBLAS obtuvieron los mejores resultados en la mayoría de los casos debido a su alto nivel de optimización. Las versiones optimizadas en C mejoraron respecto de las implementaciones manuales, especialmente cuando se aplicaron técnicas como loop unrolling y reorganización del acceso a memoria.
 
-La técnica de loop unrolling permitió mejorar el rendimiento en operaciones con ciclos internos simples. Por otra parte, el cambio en el orden de los ciclos tuvo un impacto mayor en la multiplicación matriz-matriz debido a la mejora en el acceso a memoria.
+En el producto punto, el loop unrolling redujo la sobrecarga de control del ciclo y mejoró el rendimiento de forma consistente. En la multiplicación matriz-vector, la consideración del almacenamiento row major permitió aprovechar la localidad espacial de los datos. En la multiplicación matriz-matriz, el cambio de orden de ciclos fue la optimización más determinante, reduciendo los tiempos en varios órdenes de magnitud.
 
-CBLAS obtuvo los mejores resultados en la mayoría de los casos, principalmente para tamaños grandes. Esto confirma que, cuando se trabaja con operaciones intensivas de álgebra lineal, es recomendable utilizar bibliotecas optimizadas en lugar de implementaciones manuales.
-
-Finalmente, la práctica permitió comprobar experimentalmente la relación entre complejidad algorítmica, lenguaje de programación, optimización de código, acceso a memoria y rendimiento computacional.
+En consecuencia, el rendimiento depende tanto del orden de complejidad como de la forma concreta en que el algoritmo interactúa con la arquitectura. La práctica permitió verificar experimentalmente que la optimización de código y la localidad de memoria son factores tan relevantes como la complejidad algorítmica al momento de evaluar el rendimiento computacional real.
 
 % =========================
 % ANEXOS
